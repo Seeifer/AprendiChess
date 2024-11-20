@@ -1,5 +1,6 @@
 import pygame
 import chess
+import chess.engine
 import sys
 
 pygame.init()
@@ -26,6 +27,8 @@ for color in ['w', 'b']:
 
 
 board = chess.Board()
+
+engine = chess.engine.SimpleEngine.popen_uci("C:/Users/sammh/PycharmProjects/AprendiChess/stockfish/stockfish-windows-x86-64-sse41-popcnt.exe")
 
 
 def draw_board():
@@ -114,35 +117,18 @@ def show_message(message):
 
 
 
-def confirm_move():
-    font = pygame.font.Font(None, 36)
-    confirm_text = font.render("¿Confirmas el movimiento?", True, TURN)
-    yes_text = font.render("Sí", True, TURN)
-    no_text = font.render("No", True, TURN)
-
-    confirm_surface = pygame.Surface((400, 200))
-    confirm_surface.fill(SIDEBAR)
-    confirm_surface_rect = confirm_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-
-    while True:
-        screen.blit(confirm_surface, confirm_surface_rect)
-        screen.blit(confirm_text, (confirm_surface_rect.x + 50, confirm_surface_rect.y + 50))
-        screen.blit(yes_text, (confirm_surface_rect.x + 80, confirm_surface_rect.y + 120))
-        screen.blit(no_text, (confirm_surface_rect.x + 280, confirm_surface_rect.y + 120))
-        pygame.display.flip()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = event.pos
-                if confirm_surface_rect.x + 80 <= mouse_x <= confirm_surface_rect.x + 130 and confirm_surface_rect.y + 120 <= mouse_y <= confirm_surface_rect.y + 150:
-                    return True
-                elif confirm_surface_rect.x + 280 <= mouse_x <= confirm_surface_rect.x + 330 and confirm_surface_rect.y + 120 <= mouse_y <= confirm_surface_rect.y + 150:
-                    return False
-
-
+def stockfish_move():
+    result = engine.play(board, chess.engine.Limit(time=2.0))
+    board.push(result.move)
+    if board.is_checkmate():
+        print("¡Jaque mate!")
+        show_message("¡JAQUE MATE! \n Fin del juego")
+        pygame.time.wait(2000)
+        pygame.quit()
+        sys.exit()
+    elif board.is_check():
+        print("¡Jaque!")
+        show_message("¡JAQUE!")
 
 
 running = True
@@ -163,22 +149,21 @@ while running:
             elif selected_square:
                 move = chess.Move(selected_square, square)
                 if move in board.legal_moves:
-                    if board.turn == chess.WHITE:
-                        if confirm_move():
-                            board.push(move)
-                    else:
-                        board.push(move)
+                    board.push(move)
+                    draw_board()
+                    draw_pieces()
+                    pygame.display.flip()
                     if board.is_checkmate():
                         print("¡Jaque mate!")
                         show_message("¡JAQUE MATE! \n Fin del juego")
-                        pygame.time.wait(2000)  # Esperar 2 segundos antes de cerrar el juego
+                        pygame.time.wait(2000)
                         pygame.quit()
-                        sys.exit()  # Termina el programa
+                        sys.exit()
                     elif board.is_check():
                         print("¡Jaque!")
                         show_message("¡JAQUE!")
-
-                    selected_square = None  # Deseleccionar después del movimiento
+                    selected_square = None
+                    stockfish_move()
 
     draw_board()
     highlight_moves(selected_square)
@@ -187,3 +172,4 @@ while running:
     pygame.display.flip()
 
 pygame.quit()
+engine.quit()
